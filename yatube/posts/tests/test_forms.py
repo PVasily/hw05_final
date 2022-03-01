@@ -90,4 +90,4 @@ class PostCreateFormTest(TestCase):
             f'{field["group"].help_text}': 'Выбирите группу'
         }
         for field, value in dict_match.items():
-            self.assertEquals(field, value)
+            self.assertEqual(field, value)

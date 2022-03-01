@@ -208,23 +208,13 @@ class ImageViewTest(TestCase):
         cls.authrized_client = Client()
         cls.authrized_client.force_login(cls.user)
 
-    # @classmethod
-    # def setUp(self):
-    #     cache.clear()
-
-    # @classmethod
-    # def tearDown(self):
-    #     shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
     def test_image_context(self):
+        cache.clear()
         response = self.guest_client.get(reverse(
             'posts:post_detail',
             kwargs={'post_id': self.post.id}))
         image = response.context['post'].image
         self.assertEqual(image, self.post.image)
-        response1 = self.guest_client.get(reverse('posts:index'))
-        img = response1.context['page_obj'][0].image
-        self.assertEqual(img, self.post.image)
         urls_list = (
             '/',
             f'/group/{self.group.slug}/',
@@ -300,7 +290,6 @@ class CommentViewTest(TestCase):
 
     def test_after_send_comment_view(self):
         count = self.post.comments.count()
-        print(count)
         form_data = {
             'text': Comment.objects.create(
                 post=self.post,
