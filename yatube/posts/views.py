@@ -49,11 +49,12 @@ def profile(request, username):
     posts = user.posts.all()
     count = posts.count()
     following = None
-    auth = True
-    if request.user.is_authenticated:
+    auth = None
+    if request.user.is_authenticated and request.user != user:
         following = Follow.objects.filter(
             user=request.user,
             author=user).exists()
+        auth = True
     else:
         following = None
         auth = False
@@ -132,20 +133,25 @@ def add_comment(request, post_id):
 def follow_index(request):
     title = 'Избранное'
     posts = Post.objects.filter(author__following__user=request.user)
+    page_obj = get_paginator(request, posts, POSTS_PER_PAGE)
     context = {
         'title': title,
-        'page_obj': posts
+        'page_obj': page_obj
     }
     return render(request, 'posts/follow.html', context)
 
 
 @login_required
 def profile_follow(request, username):
-    # Подписаться на автора
+
     user = get_object_or_404(User, username=username)
-    Follow.objects.create(user=request.user, author=user)
-    print(Follow.objects.count())
-    return redirect(f'/profile/{username}/')
+    if request.user != user and Follow.objects.filter(
+            user=request.user,
+            author=user).count() == 0:
+        Follow.objects.create(user=request.user, author=user)
+        print(Follow.objects.filter(user=request.user, author=user).count())
+        return redirect(f'/profile/{username}/')
+    return redirect(f'/profile/{username}')
 
 
 @login_required

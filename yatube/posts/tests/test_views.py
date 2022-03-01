@@ -376,6 +376,10 @@ class FollowTest(TestCase):
             kwargs={'username': self.admin.username}))
         self.assertEqual(Follow.objects.count(), 1)
         self.auth_user.get(reverse(
+            'posts:profile_follow',
+            kwargs={'username': self.admin.username}))
+        self.assertEqual(Follow.objects.count(), 1)
+        self.auth_user.get(reverse(
             'posts:profile_unfollow',
             kwargs={'username': self.admin.username}))
         self.assertEqual(Follow.objects.count(), 0)
