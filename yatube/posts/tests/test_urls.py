@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 from ..models import Post, Group
 
@@ -28,8 +29,8 @@ class PostURLTests(TestCase):
         cls.auth_admin.force_login(cls.admin)
 
     def test_homepage(self):
-        guest_client = Client()
-        response = guest_client.get('/')
+        # guest_client = Client()
+        response = self.guest_client.get('/')
         self.assertEqual(response.status_code, 200)
 
     def test_post_edit_url(self):
@@ -53,11 +54,17 @@ class PostURLTests(TestCase):
 
     def test_guest_urls(self):
         dict_match = {
-            f'/group/{self.group.slug}/': 200,
-            f'/posts/{self.post.id}/': 200,
-            '/': 200,
+            reverse(
+                'posts:group_list',
+                kwargs={'slug': self.group.slug}): 200,
+            reverse(
+                'posts:post_detail',
+                kwargs={'post_id': self.post.id}): 200,
+            reverse('posts:index'): 200,
             '/unexpected-page/': 404,
-            f'/profile/{self.user.username}/': 200
+            reverse(
+                'posts:profile',
+                kwargs={'username': self.user.username}): 200
         }
         for url, status_code in dict_match.items():
             with self.subTest(url=url):
@@ -65,5 +72,7 @@ class PostURLTests(TestCase):
                 self.assertEqual(response.status_code, status_code)
 
     def test_create_page_url_redirect_anonymous_on_login(self):
-        response = self.guest_client.get('/create/', follow=True)
+        response = self.guest_client.get(
+            reverse('posts:post_create'),
+            follow=True)
         self.assertRedirects(response, '/auth/login/?next=/create/')

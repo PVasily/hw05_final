@@ -1,5 +1,3 @@
-from xml.etree.ElementTree import Comment
-
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -162,12 +160,20 @@ class PaginatorTest(TestCase):
         qnt_per_first_page = 10
         qnt_per_last_page = 3
         tup_addr = (
-            ('/', '', qnt_per_first_page),
-            (f'/group/{slug}/', '', qnt_per_first_page),
-            (f'/profile/{username}/', '', qnt_per_first_page),
-            ('/', num_page, qnt_per_last_page),
-            (f'/profile/{username}/', num_page, qnt_per_last_page),
-            (f'/group/{slug}/', num_page, qnt_per_last_page)
+            (reverse('posts:index'), '', qnt_per_first_page),
+            (reverse('posts:group_list', kwargs={'slug': slug}),
+                '',
+                qnt_per_first_page),
+            (reverse('posts:profile', kwargs={'username': username}),
+                '',
+                qnt_per_first_page),
+            (reverse('posts:index'), num_page, qnt_per_last_page),
+            (reverse('posts:profile', kwargs={'username': username}),
+                num_page,
+                qnt_per_last_page),
+            (reverse('posts:group_list', kwargs={'slug': slug}),
+                num_page,
+                qnt_per_last_page)
         )
         for address, num, qnt in tup_addr:
             with self.subTest(address=address):
@@ -216,9 +222,9 @@ class ImageViewTest(TestCase):
         image = response.context['post'].image
         self.assertEqual(image, self.post.image)
         urls_list = (
-            '/',
-            f'/group/{self.group.slug}/',
-            f'/profile/{self.user.username}/'
+            reverse('posts:index'),
+            reverse('posts:group_list', kwargs={'slug': self.group.slug}),
+            reverse('posts:profile', kwargs={'username': self.user.username})
         )
         cache.clear()
         for url in urls_list:
@@ -226,33 +232,6 @@ class ImageViewTest(TestCase):
                 response = self.guest_client.get(url)
                 image = response.context['page_obj'][0].image
                 self.assertEqual(image, self.post.image)
-
-    def test_create_post_with_image(self):
-        count = Post.objects.count()
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
-        uploaded = SimpleUploadedFile(
-            name='small.gif',
-            content=small_gif,
-            content_type='image/gif'
-        )
-        form_data = {
-            'text': 'Test post with image',
-            'image': uploaded
-        }
-        response = self.authrized_client.post(
-            reverse('posts:post_create'),
-            data=form_data,
-            follow=True
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Post.objects.count(), count + 1)
 
 
 class CommentViewTest(TestCase):
@@ -275,39 +254,39 @@ class CommentViewTest(TestCase):
         self.comment = Comment.objects.create(
             post=self.post,
             author=self.user,
-            text='New comment',)
+            text='New comment'
+        )
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
     def test_comment_only_auth(self):
-        response = self.authorized_client.get(reverse(
-            'posts:post_detail',
-            kwargs={'post_id': self.post.id}
-        ))
-        form = response.context['form']
-        self.assertTrue(form)
-
-    def test_after_send_comment_view(self):
         count = self.post.comments.count()
         form_data = {
-            'text': Comment.objects.create(
-                post=self.post,
-                author=self.user,
-                text='Second comment'
-            )
+            'post': self.post,
+            'author': self.guest_client,
+            'text': 'The newest text'
         }
-        self.authorized_client.post(
-            reverse('posts:post_detail', kwargs={'post_id': self.post.id}),
+        self.authorized_client.post(reverse(
+            'posts:add_comment',
+            kwargs={'post_id': self.post.id}),
             data=form_data,
             follow=True)
         self.assertEqual(self.post.comments.count(), count + 1)
 
     def test_no_allow_send_comment_guest(self):
-        response = self.guest_client.get(
-            reverse('posts:post_detail', kwargs={'post_id': self.post.id}),
+        count = self.post.comments.count()
+        form_data = {
+            'post': self.post,
+            'author': self.guest_client,
+            'text': 'The newest text'
+        }
+        self.guest_client.post(reverse(
+            'posts:add_comment',
+            kwargs={'post_id': self.post.id}),
+            data=form_data,
             follow=True)
-        self.assertTemplateNotUsed(response.content)
+        self.assertEqual(self.post.comments.count(), count)
 
 
 class CacheTest(TestCase):
@@ -359,7 +338,7 @@ class FollowTest(TestCase):
             group=self.group
         )
 
-    def test_follow_unfollow(self):
+    def test_follow(self):
         self.auth_user.get(reverse(
             'posts:profile_follow',
             kwargs={'username': self.admin.username}))
@@ -368,6 +347,8 @@ class FollowTest(TestCase):
             'posts:profile_follow',
             kwargs={'username': self.admin.username}))
         self.assertEqual(Follow.objects.count(), 1)
+
+    def test_unfollow(self):
         self.auth_user.get(reverse(
             'posts:profile_unfollow',
             kwargs={'username': self.admin.username}))

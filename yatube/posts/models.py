@@ -7,10 +7,12 @@ User = get_user_model()
 class Post(models.Model):
     text = models.TextField(
         help_text='Введите текст',
-        verbose_name='Текст поста')
+        verbose_name='Текст поста'
+    )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Дата создания')
+        verbose_name='Дата создания'
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -53,7 +55,8 @@ class Comment(models.Model):
     post = models.ForeignKey(
         Post,
         related_name='comments',
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE
+    )
     author = models.ForeignKey(
         User,
         related_name='comments',

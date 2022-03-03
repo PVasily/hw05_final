@@ -45,26 +45,22 @@ def group_post(request, slug):
 
 
 def profile(request, username):
-    user = get_object_or_404(User, username=username)
-    posts = user.posts.all()
+    author = get_object_or_404(User, username=username)
+    posts = author.posts.all()
     count = posts.count()
     following = None
-    auth = None
-    if request.user.is_authenticated and request.user != user:
+    if request.user.is_authenticated and request.user != author:
         following = Follow.objects.filter(
             user=request.user,
-            author=user).exists()
-        auth = True
+            author=author).exists()
     else:
         following = None
-        auth = False
     page_obj = get_paginator(request, posts, POSTS_PER_PAGE)
     context = {
-        'auth': auth,
         'following': following,
         'count': count,
         'page_obj': page_obj,
-        'author': user
+        'author': author
     }
     return render(request, 'posts/profile.html', context)
 
@@ -119,7 +115,7 @@ def post_edit(request, post_id):
 
 @login_required
 def add_comment(request, post_id):
-    post = Post.objects.get(id=post_id)
+    post = get_object_or_404(Post, id=post_id)
     form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)
@@ -143,20 +139,17 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-
     user = get_object_or_404(User, username=username)
     if request.user != user and Follow.objects.filter(
             user=request.user,
             author=user).count() == 0:
         Follow.objects.create(user=request.user, author=user)
-        print(Follow.objects.filter(user=request.user, author=user).count())
-        return redirect(f'/profile/{username}/')
-    return redirect(f'/profile/{username}')
+    return redirect('posts:profile', username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
     user = get_object_or_404(User, username=username)
-    unfollow = Follow.objects.get(user=request.user, author=user)
+    unfollow = get_object_or_404(Follow, user=request.user, author=user)
     unfollow.delete()
-    return redirect(f'/profile/{username}/')
+    return redirect('posts:profile', username=username)

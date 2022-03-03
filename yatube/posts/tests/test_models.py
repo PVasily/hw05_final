@@ -1,7 +1,8 @@
+from xml.etree.ElementTree import Comment
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from ..models import Group, Post
+from ..models import Group, Post, Comment
 
 User = get_user_model()
 
@@ -19,6 +20,11 @@ class PostModelTest(TestCase):
         cls.post = Post.objects.create(
             author=cls.user,
             text='Тестовый пост, созданный для тестирования',
+        )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.user,
+            text='New comment'
         )
 
     def test_model_post_have_correct_object_names(self):
@@ -48,3 +54,7 @@ class PostModelTest(TestCase):
         }
         for field, value in dict_match.items():
             self.assertEqual(field, value)
+
+    def test_comment_fields(self):
+        comment_field = self.comment._meta.get_field('text').verbose_name
+        self.assertEqual(comment_field, 'Текст комментария')
