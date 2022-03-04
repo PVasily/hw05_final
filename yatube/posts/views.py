@@ -48,13 +48,7 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
     count = posts.count()
-    following = None
-    if request.user.is_authenticated and request.user != author:
-        following = Follow.objects.filter(
-            user=request.user,
-            author=author).exists()
-    else:
-        following = None
+    following = author.following.filter(user=request.user.id).exists()
     page_obj = get_paginator(request, posts, POSTS_PER_PAGE)
     context = {
         'following': following,
@@ -140,9 +134,8 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     user = get_object_or_404(User, username=username)
-    if request.user != user and Follow.objects.filter(
-            user=request.user,
-            author=user).count() == 0:
+    if request.user != user and not user.following.filter(
+            user=request.user.id).exists():
         Follow.objects.create(user=request.user, author=user)
     return redirect('posts:profile', username=username)
 

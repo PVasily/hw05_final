@@ -5,7 +5,7 @@
   <div class="container py-5">
     <h1>Все посты пользователя {% include 'includes/name_or_fullname.html' %}</h1>
     <p>Всего постов {{ count }}</p>
-    {% if user != author %}
+    {% if request.user.is_authenticated and request.user != author %}
     {% if following %}
     <a
       class="btn btn-lg btn-light"
